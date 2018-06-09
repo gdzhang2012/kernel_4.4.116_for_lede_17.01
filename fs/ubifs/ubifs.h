@@ -106,10 +106,6 @@
  */
 #define BGT_NAME_PATTERN "ubifs_bgt%d_%d"
 
-/* Write-buffer synchronization timeout interval in seconds */
-#define WBUF_TIMEOUT_SOFTLIMIT 3
-#define WBUF_TIMEOUT_HARDLIMIT 5
-
 /* Maximum possible inode number (only 32-bit inodes are supported now) */
 #define MAX_INUM 0xFFFFFFFF
 
@@ -180,6 +176,7 @@ enum {
 	WB_MUTEX_1 = 0,
 	WB_MUTEX_2 = 1,
 	WB_MUTEX_3 = 2,
+	WB_MUTEX_4 = 3,
 };
 
 /*
@@ -667,9 +664,6 @@ typedef int (*ubifs_lpt_scan_callback)(struct ubifs_info *c,
  * @io_mutex: serializes write-buffer I/O
  * @lock: serializes @buf, @lnum, @offs, @avail, @used, @next_ino and @inodes
  *        fields
- * @softlimit: soft write-buffer timeout interval
- * @delta: hard and soft timeouts delta (the timer expire interval is @softlimit
- *         and @softlimit + @delta)
  * @timer: write-buffer timer
  * @no_timer: non-zero if this write-buffer does not have a timer
  * @need_sync: non-zero if the timer expired and the wbuf needs sync'ing
@@ -698,8 +692,6 @@ struct ubifs_wbuf {
 	int (*sync_callback)(struct ubifs_info *c, int lnum, int free, int pad);
 	struct mutex io_mutex;
 	spinlock_t lock;
-	ktime_t softlimit;
-	unsigned long long delta;
 	struct hrtimer timer;
 	unsigned int no_timer:1;
 	unsigned int need_sync:1;
@@ -1543,10 +1535,15 @@ int ubifs_jnl_write_data(struct ubifs_info *c, const struct inode *inode,
 			 const union ubifs_key *key, const void *buf, int len);
 int ubifs_jnl_write_inode(struct ubifs_info *c, const struct inode *inode);
 int ubifs_jnl_delete_inode(struct ubifs_info *c, const struct inode *inode);
+int ubifs_jnl_xrename(struct ubifs_info *c, const struct inode *fst_dir,
+		      const struct dentry *fst_dentry,
+		      const struct inode *snd_dir,
+		      const struct dentry *snd_dentry, int sync);
 int ubifs_jnl_rename(struct ubifs_info *c, const struct inode *old_dir,
 		     const struct dentry *old_dentry,
 		     const struct inode *new_dir,
-		     const struct dentry *new_dentry, int sync);
+		     const struct dentry *new_dentry,
+		     const struct inode *whiteout, int sync);
 int ubifs_jnl_truncate(struct ubifs_info *c, const struct inode *inode,
 		       loff_t old_size, loff_t new_size);
 int ubifs_jnl_delete_xattr(struct ubifs_info *c, const struct inode *host,

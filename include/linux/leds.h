@@ -48,6 +48,9 @@ struct led_classdev {
 #define SET_BRIGHTNESS_ASYNC	(1 << 21)
 #define SET_BRIGHTNESS_SYNC	(1 << 22)
 #define LED_DEV_CAP_FLASH	(1 << 23)
+	/* Additions for Raspberry Pi PWR LED */
+#define SET_GPIO_INPUT		(1 << 30)
+#define SET_GPIO_OUTPUT		(1 << 31)
 
 	/* Set LED brightness level */
 	/* Must not sleep, use a workqueue if needed */
@@ -103,10 +106,16 @@ struct led_classdev {
 	struct mutex		led_access;
 };
 
-extern int led_classdev_register(struct device *parent,
-				 struct led_classdev *led_cdev);
-extern int devm_led_classdev_register(struct device *parent,
-				      struct led_classdev *led_cdev);
+extern int of_led_classdev_register(struct device *parent,
+				    struct device_node *np,
+				    struct led_classdev *led_cdev);
+#define led_classdev_register(parent, led_cdev)				\
+	of_led_classdev_register(parent, NULL, led_cdev)
+extern int devm_of_led_classdev_register(struct device *parent,
+					 struct device_node *np,
+					 struct led_classdev *led_cdev);
+#define devm_led_classdev_register(parent, led_cdev)			\
+	devm_of_led_classdev_register(parent, NULL, led_cdev)
 extern void led_classdev_unregister(struct led_classdev *led_cdev);
 extern void devm_led_classdev_unregister(struct device *parent,
 					 struct led_classdev *led_cdev);
@@ -330,6 +339,11 @@ struct led_platform_data {
 	struct led_info	*leds;
 };
 
+struct gpio_desc;
+typedef int (*gpio_blink_set_t)(struct gpio_desc *desc, int state,
+				unsigned long *delay_on,
+				unsigned long *delay_off);
+
 /* For the leds-gpio driver */
 struct gpio_led {
 	const char *name;
@@ -352,9 +366,7 @@ struct gpio_led_platform_data {
 #define GPIO_LED_NO_BLINK_LOW	0	/* No blink GPIO state low */
 #define GPIO_LED_NO_BLINK_HIGH	1	/* No blink GPIO state high */
 #define GPIO_LED_BLINK		2	/* Please, blink */
-	int		(*gpio_blink_set)(struct gpio_desc *desc, int state,
-					unsigned long *delay_on,
-					unsigned long *delay_off);
+	gpio_blink_set_t	gpio_blink_set;
 };
 
 struct platform_device *gpio_led_register_device(

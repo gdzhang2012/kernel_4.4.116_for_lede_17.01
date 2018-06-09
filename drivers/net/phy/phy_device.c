@@ -734,6 +734,9 @@ void phy_detach(struct phy_device *phydev)
 	struct mii_bus *bus;
 	int i;
 
+	if (phydev->drv && phydev->drv->detach)
+		phydev->drv->detach(phydev);
+
 	phydev->attached_dev->phydev = NULL;
 	phydev->attached_dev = NULL;
 	phy_suspend(phydev);
@@ -994,6 +997,9 @@ static int gen10g_config_aneg(struct phy_device *phydev)
 int genphy_update_link(struct phy_device *phydev)
 {
 	int status;
+
+	if (phydev->drv->update_link)
+		return phydev->drv->update_link(phydev);
 
 	/* Do a fake read */
 	status = phy_read(phydev, MII_BMSR);

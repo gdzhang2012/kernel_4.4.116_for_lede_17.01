@@ -22,10 +22,15 @@ endif
 ifeq ($(CONFIG_ARM_MODULE_PLTS),y)
 LDFLAGS_MODULE	+= -T $(srctree)/arch/arm/kernel/module.lds
 endif
+LDFLAGS_vmlinux += --gc-sections
 
 OBJCOPYFLAGS	:=-O binary -R .comment -S
 GZFLAGS		:=-9
 #KBUILD_CFLAGS	+=-pipe
+
+ifndef CONFIG_FUNCTION_TRACER
+KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
+endif
 
 # Never generate .eh_frame
 KBUILD_CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
@@ -154,6 +159,8 @@ textofs-$(CONFIG_ARCH_AXXIA) := 0x00308000
 
 # Machine directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
+machine-$(CONFIG_ARCH_BCM2708)		+= bcm2708
+machine-$(CONFIG_ARCH_BCM2709)		+= bcm2709
 machine-$(CONFIG_ARCH_ALPINE)		+= alpine
 machine-$(CONFIG_ARCH_AT91)		+= at91
 machine-$(CONFIG_ARCH_AXXIA)		+= axxia

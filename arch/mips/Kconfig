@@ -1033,9 +1033,6 @@ config FW_ARC
 config ARCH_MAY_HAVE_PC_FDC
 	bool
 
-config BOOT_RAW
-	bool
-
 config CEVT_BCM1480
 	bool
 
@@ -1126,6 +1123,10 @@ config SYNC_R4K
 
 config MIPS_MACHINE
 	def_bool n
+
+config IMAGE_CMDLINE_HACK
+	bool "OpenWrt specific image command line hack"
+	default n
 
 config NO_IOPORT_MAP
 	def_bool n
@@ -1619,6 +1620,7 @@ config CPU_CAVIUM_OCTEON
 	select USB_EHCI_BIG_ENDIAN_MMIO if CPU_BIG_ENDIAN
 	select USB_OHCI_BIG_ENDIAN_MMIO if CPU_BIG_ENDIAN
 	select MIPS_L1_CACHE_SHIFT_7
+	select SYS_HAS_DMA_OPS
 	help
 	  The Cavium Octeon processor is a highly integrated chip containing
 	  many ethernet hardware widgets for networking tasks. The processor
@@ -1913,6 +1915,9 @@ config MIPS_MALTA_PM
 	depends on PCI
 	bool
 	default y
+
+config SYS_HAS_DMA_OPS
+	bool
 
 #
 # CPU may reorder R->R, R->W, W->R, W->W
@@ -2720,6 +2725,20 @@ config MIPS_O32_FP64_SUPPORT
 
 	  If unsure, say N.
 
+config MIPS_FPU_EMULATOR
+	bool "MIPS FPU Emulator"
+	default y
+	help
+	  This option lets you disable the built-in MIPS FPU (Coprocessor 1)
+	  emulator, which handles floating-point instructions on processors
+	  without a hardware FPU.  It is generally a good idea to keep the
+	  emulator built-in, unless you are perfectly sure you have a
+	  complete soft-float environment.  With the emulator disabled, all
+	  users of float operations will be killed with an illegal instr-
+	  uction exception.
+
+	  Say Y, please.
+
 config USE_OF
 	bool
 	select OF
@@ -2753,10 +2772,10 @@ choice
 		  the documented boot protocol using a device tree.
 
 	config MIPS_RAW_APPENDED_DTB
-		bool "vmlinux.bin"
+		bool "vmlinux.bin or vmlinuz.bin"
 		help
 		  With this option, the boot code will look for a device tree binary
-		  DTB) appended to raw vmlinux.bin (without decompressor).
+		  DTB) appended to raw vmlinux.bin or vmlinuz.bin.
 		  (e.g. cat vmlinux.bin <filename>.dtb > vmlinux_w_dtb).
 
 		  This is meant as a backward compatibility convenience for those
@@ -2767,24 +2786,6 @@ choice
 		  this option being confused by leftover garbage in memory that might
 		  look like a DTB header after a reboot if no actual DTB is appended
 		  to vmlinux.bin.  Do not leave this option active in a production kernel
-		  if you don't intend to always append a DTB.
-
-	config MIPS_ZBOOT_APPENDED_DTB
-		bool "vmlinuz.bin"
-		depends on SYS_SUPPORTS_ZBOOT
-		help
-		  With this option, the boot code will look for a device tree binary
-		  DTB) appended to raw vmlinuz.bin (with decompressor).
-		  (e.g. cat vmlinuz.bin <filename>.dtb > vmlinuz_w_dtb).
-
-		  This is meant as a backward compatibility convenience for those
-		  systems with a bootloader that can't be upgraded to accommodate
-		  the documented boot protocol using a device tree.
-
-		  Beware that there is very little in terms of protection against
-		  this option being confused by leftover garbage in memory that might
-		  look like a DTB header after a reboot if no actual DTB is appended
-		  to vmlinuz.bin.  Do not leave this option active in a production kernel
 		  if you don't intend to always append a DTB.
 endchoice
 
@@ -2806,6 +2807,18 @@ choice
 	config MIPS_CMDLINE_FROM_BOOTLOADER
 		bool "Bootloader kernel arguments if available"
 endchoice
+
+config BOOT_RAW
+	bool "Enable the kernel to be executed from the load address"
+	default n
+	help
+	 Allow the kernel to be executed from the load address for
+	 bootloaders which cannot read the ELF format. This places
+	 a jump to start_kernel at the load address.
+
+	 If unsure, say N.
+
+
 
 endmenu
 

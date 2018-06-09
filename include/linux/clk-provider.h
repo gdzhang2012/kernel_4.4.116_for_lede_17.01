@@ -31,6 +31,7 @@
 #define CLK_SET_RATE_NO_REPARENT BIT(7) /* don't re-parent on rate change */
 #define CLK_GET_ACCURACY_NOCACHE BIT(8) /* do not use the cached clk accuracy */
 #define CLK_RECALC_NEW_RATES	BIT(9) /* recalc rates after notifications */
+#define CLK_IS_CRITICAL		BIT(11) /* do not gate, ever */
 
 struct clk;
 struct clk_hw;
@@ -639,8 +640,14 @@ void of_gpio_mux_clk_setup(struct device_node *node);
 struct clk *clk_register(struct device *dev, struct clk_hw *hw);
 struct clk *devm_clk_register(struct device *dev, struct clk_hw *hw);
 
+int __must_check clk_hw_register(struct device *dev, struct clk_hw *hw);
+int __must_check devm_clk_hw_register(struct device *dev, struct clk_hw *hw);
+
 void clk_unregister(struct clk *clk);
 void devm_clk_unregister(struct device *dev, struct clk *clk);
+
+void clk_hw_unregister(struct clk_hw *hw);
+void devm_clk_hw_unregister(struct device *dev, struct clk_hw *hw);
 
 /* helper functions */
 const char *__clk_get_name(const struct clk *clk);
@@ -687,6 +694,11 @@ struct clk_onecell_data {
 	unsigned int clk_num;
 };
 
+struct clk_hw_onecell_data {
+	size_t num;
+	struct clk_hw *hws[];
+};
+
 extern struct of_device_id __clk_of_table;
 
 #define CLK_OF_DECLARE(name, compat, fn) OF_DECLARE_1(clk, name, compat, fn)
@@ -696,10 +708,19 @@ int of_clk_add_provider(struct device_node *np,
 			struct clk *(*clk_src_get)(struct of_phandle_args *args,
 						   void *data),
 			void *data);
+int of_clk_add_hw_provider(struct device_node *np,
+			   struct clk_hw *(*get)(struct of_phandle_args *clkspec,
+						 void *data),
+			   void *data);
 void of_clk_del_provider(struct device_node *np);
 struct clk *of_clk_src_simple_get(struct of_phandle_args *clkspec,
 				  void *data);
+
+struct clk_hw *of_clk_hw_simple_get(struct of_phandle_args *clkspec,
+				    void *data);
 struct clk *of_clk_src_onecell_get(struct of_phandle_args *clkspec, void *data);
+struct clk_hw *of_clk_hw_onecell_get(struct of_phandle_args *clkspec,
+				     void *data);
 int of_clk_get_parent_count(struct device_node *np);
 int of_clk_parent_fill(struct device_node *np, const char **parents,
 		       unsigned int size);
@@ -716,6 +737,13 @@ static inline int of_clk_add_provider(struct device_node *np,
 {
 	return 0;
 }
+static inline int of_clk_add_hw_provider(struct device_node *np,
+			struct clk_hw *(*get)(struct of_phandle_args *clkspec,
+					      void *data),
+			void *data)
+{
+	return 0;
+}
 #define of_clk_del_provider(np) \
 	{ while (0); }
 static inline struct clk *of_clk_src_simple_get(
@@ -723,8 +751,18 @@ static inline struct clk *of_clk_src_simple_get(
 {
 	return ERR_PTR(-ENOENT);
 }
+static inline struct clk_hw *
+of_clk_hw_simple_get(struct of_phandle_args *clkspec, void *data)
+{
+	return ERR_PTR(-ENOENT);
+}
 static inline struct clk *of_clk_src_onecell_get(
 	struct of_phandle_args *clkspec, void *data)
+{
+	return ERR_PTR(-ENOENT);
+}
+static inline struct clk_hw *
+of_clk_hw_onecell_get(struct of_phandle_args *clkspec, void *data)
 {
 	return ERR_PTR(-ENOENT);
 }
